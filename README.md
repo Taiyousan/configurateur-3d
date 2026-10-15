@@ -13,6 +13,7 @@ Configurateur de modèles 3D dans le navigateur : glissez-déposez un modèle, s
 - **Coloris** : enregistrer plusieurs variantes et passer de l'une à l'autre, ou générer un coloris aléatoire
 - **Mise en scène** : environnements HDR, fond, ombres au sol, rotation automatique, cadrage animé (double-clic sur une pièce)
 - **Export** : capture PNG et export du modèle personnalisé en `.glb`
+- **Mode d'emploi** intégré, ouvert à la première visite puis avec la touche `?`
 
 ## Lancer le projet
 
@@ -25,12 +26,18 @@ npm run dev
 
 | Fichier | Rôle |
 | --- | --- |
-| `src/lib/loadModel.ts` | Chargement des formats, résolution des fichiers externes d'un glTF |
-| `src/lib/materials.ts` | Préparation du modèle (un matériau par mesh, états d'origine, stats, normalisation) |
+| `src/lib/loadModel.ts` | Chargement des formats (FBX, OBJ, STL chargés à la demande), fichiers externes d'un glTF |
+| `src/lib/materials.ts` | Préparation du modèle (un matériau par mesh, états d'origine, stats, normalisation), palette |
+| `src/lib/exporters.ts` | Capture PNG et export GLB |
 | `src/store.ts` | État global : modèle, sélection, historique, coloris, réglages de scène |
-| `src/components/Viewer.tsx` | Scène R3F : caméra, interactions, contours de sélection |
-| `src/components/*Panel*.tsx`, `SceneTree.tsx` | Interface |
+| `src/components/Viewer.tsx` | Scène R3F rendue à la demande : caméra, interactions, contours de sélection |
+| `src/components/*Panel*.tsx`, `SceneTree.tsx`, `Toolbar.tsx` | Interface |
+| `src/components/ui.tsx` | Primitives partagées (section, curseur) |
+| `src/site.ts` | Auteur et liens |
 
 ## Crédits
 
-Modèle de chaussure : [pmndrs/examples](https://github.com/pmndrs/examples/tree/main/examples/shoe-configurator) (licence MIT, © Poimandres).
+- Modèle de chaussure : [pmndrs/examples](https://github.com/pmndrs/examples/tree/main/examples/shoe-configurator) (licence MIT, © Poimandres)
+- Éclairages : HDRI de [Poly Haven](https://polyhaven.com) (CC0), via drei
+
+Par [Shams Benhamou](https://portfolio-train-livid.vercel.app/). L'identité visuelle reprend les couleurs et les polices de mon portfolio.

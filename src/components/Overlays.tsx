@@ -4,7 +4,7 @@ import { filesFromDataTransfer, MODEL_EXTENSIONS } from '../lib/loadModel'
 import { labelOf } from '../lib/materials'
 import { Icon } from './Icons'
 
-/** Zone de dépôt plein écran, active dès qu'on glisse des fichiers sur la page. */
+// Full-screen drop target, shown as soon as files are dragged over the page.
 export function DropZone() {
   const [dragging, setDragging] = useState(false)
   const depth = useRef(0)
@@ -53,17 +53,15 @@ export function DropZone() {
   return (
     <div className="dropzone">
       <div className="dropzone-inner">
-        <Icon name="upload" size={40} />
-        <p className="dropzone-title">Déposez votre modèle 3D</p>
-        <p className="muted">
-          {MODEL_EXTENSIONS.map((e) => '.' + e).join(' · ')} — un dossier .gltf avec ses textures fonctionne aussi
-        </p>
+        <Icon name="upload" size={32} />
+        <p className="dropzone-title">Lâchez pour importer</p>
+        <p className="mono-list">{MODEL_EXTENSIONS.map((e) => '.' + e).join(' · ')}</p>
       </div>
     </div>
   )
 }
 
-/** Nom de la pièce survolée, qui suit le curseur. */
+// The hovered part's name, following the pointer.
 export function HoverLabel() {
   const hovered = useStore((s) => s.hovered)
   const ref = useRef<HTMLDivElement>(null)
@@ -100,16 +98,16 @@ export function StatusOverlay() {
       {status === 'loading' && (
         <div className="loading">
           <div className="spinner" />
-          <span>Chargement du modèle…</span>
+          <span>Chargement</span>
         </div>
       )}
       {!hasModel && status !== 'loading' && (
         <div className="welcome">
-          <Icon name="upload" size={36} />
-          <h2>Glissez-déposez un modèle 3D</h2>
+          <p className="kicker">Aucun modèle</p>
+          <h2>Déposez un fichier 3D ici</h2>
           <p className="muted">GLB, glTF, FBX, OBJ ou STL</p>
           <button className="btn primary" onClick={() => useStore.getState().loadDemo()}>
-            Essayer avec la chaussure
+            Charger la démo
           </button>
         </div>
       )}
