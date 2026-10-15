@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useStore } from './store'
 import { Viewer } from './components/Viewer'
 import { Toolbar } from './components/Toolbar'
@@ -6,40 +6,69 @@ import { SceneTree } from './components/SceneTree'
 import { MaterialPanel } from './components/MaterialPanel'
 import { ScenePanel, VariantsPanel } from './components/SidePanels'
 import { DropZone, HoverLabel, StatusOverlay } from './components/Overlays'
+import { HelpDialog } from './components/HelpDialog'
 import { Icon } from './components/Icons'
 
-function useShortcuts() {
+const HELP_SEEN_KEY = 'configurateur-3d:help-seen'
+
+// Storage can be missing or throw (private mode, blocked site data).
+function helpSeen() {
+  try {
+    return localStorage.getItem(HELP_SEEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function markHelpSeen() {
+  try {
+    localStorage.setItem(HELP_SEEN_KEY, '1')
+  } catch {
+    // Nothing to do: the help will simply show up again next time.
+  }
+}
+
+function useShortcuts(openHelp: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.closest('input, select, textarea')) return
+      // The help dialog handles its own keys (Escape closes it).
+      if (document.querySelector('dialog[open]')) return
       const s = useStore.getState()
       const mod = e.ctrlKey || e.metaKey
-      if (e.key === 'Escape') s.select(null)
-      else if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) (e.preventDefault(), s.undo())
-      else if (mod && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)))
-        (e.preventDefault(), s.redo())
-      else if (!mod && e.key.toLowerCase() === 'f') s.focusOn(s.selection.length ? s.selection : null)
+      const key = e.key.toLowerCase()
+      if (e.key === '?') openHelp()
+      else if (e.key === 'Escape') s.select(null)
+      else if (mod && key === 'z' && !e.shiftKey) (e.preventDefault(), s.undo())
+      else if (mod && (key === 'y' || (key === 'z' && e.shiftKey))) (e.preventDefault(), s.redo())
+      else if (!mod && key === 'f') s.focusOn(s.selection.length ? s.selection : null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [openHelp])
 }
 
 export default function App() {
   const hasModel = useStore((s) => !!s.model)
   const [treeOpen, setTreeOpen] = useState(() => window.innerWidth > 860)
+  const [helpOpen, setHelpOpen] = useState(() => !helpSeen())
 
-  useShortcuts()
+  const closeHelp = () => {
+    setHelpOpen(false)
+    markHelpSeen()
+  }
+
+  const openHelp = useCallback(() => setHelpOpen(true), [])
+  useShortcuts(openHelp)
   useEffect(() => {
-    // Garde contre le double montage du StrictMode en dev.
+    // Guard against StrictMode's double mount in dev.
     if (useStore.getState().status === 'idle') useStore.getState().loadDemo()
   }, [])
 
   return (
     <div className="app">
       <Viewer />
-      <Toolbar />
+      <Toolbar onHelp={openHelp} />
 
       {hasModel && (
         <>
@@ -61,10 +90,9 @@ export default function App() {
           </aside>
           <footer className="hints">
             <span><kbd>Clic</kbd> sélectionner</span>
-            <span><kbd>Maj</kbd>+<kbd>Clic</kbd> multi</span>
+            <span><kbd>Maj</kbd> + <kbd>Clic</kbd> ajouter</span>
             <span><kbd>Double-clic</kbd> zoomer</span>
-            <span><kbd>F</kbd> cadrer</span>
-            <span><kbd>Échap</kbd> désélectionner</span>
+            <span><kbd>?</kbd> aide</span>
           </footer>
         </>
       )}
@@ -72,6 +100,7 @@ export default function App() {
       <HoverLabel />
       <StatusOverlay />
       <DropZone />
+      <HelpDialog open={helpOpen} onClose={closeHelp} />
     </div>
   )
 }

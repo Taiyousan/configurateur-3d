@@ -1,52 +1,48 @@
-import type { CSSProperties } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useStore, type EnvPreset } from '../store'
-import { collectMaterials } from '../lib/materials'
-import { PALETTE } from './MaterialPanel'
 import { Icon } from './Icons'
+import { Section, Slider } from './ui'
 
 export function VariantsPanel() {
   const model = useStore((s) => s.model)
   const variants = useStore((s) => s.variants)
-  const { saveVariant, applyVariant, deleteVariant, beginEdit, touch } = useStore.getState()
+  const { saveVariant, applyVariant, deleteVariant, randomizeColors } = useStore.getState()
 
   if (!model) return null
 
-  const randomize = () => {
-    const materials = collectMaterials([model.root])
-    beginEdit(materials)
-    for (const m of materials) m.color.set(PALETTE[Math.floor(Math.random() * PALETTE.length)])
-    touch()
-  }
-
   return (
-    <section className="panel">
-      <header className="panel-header">
-        <Icon name="sparkles" />
-        <h2>Coloris</h2>
-        <button className="icon-btn ghost" onClick={randomize} title="Coloris aléatoire" aria-label="Coloris aléatoire">
-          <Icon name="dice" />
-        </button>
-      </header>
-      <div className="variants">
-        {variants.map((v) => (
-          <div key={v.id} className="variant">
-            <button className="variant-apply" onClick={() => applyVariant(v.id)} title={`Appliquer « ${v.name} »`}>
-              <span className="variant-swatches">
-                {v.swatches.map((c) => (
-                  <span key={c} style={{ background: c }} />
-                ))}
-              </span>
-              <span>{v.name}</span>
-            </button>
-            <button className="icon-btn ghost" onClick={() => deleteVariant(v.id)} aria-label={`Supprimer ${v.name}`}>
-              <Icon name="x" size={14} />
-            </button>
-          </div>
-        ))}
+    <section className="panel card-body">
+      <Section
+        title="Coloris"
+        aside={
+          <button className="text-btn" onClick={randomizeColors} title="Une couleur au hasard pour chaque pièce">
+            <Icon name="dice" size={13} /> Au hasard
+          </button>
+        }
+      >
+        {variants.length > 0 && (
+          <ul className="variants">
+            {variants.map((v) => (
+              <li key={v.id} className="variant">
+                <button className="variant-apply" onClick={() => applyVariant(v.id)} title={`Appliquer « ${v.name} »`}>
+                  <span className="variant-swatches">
+                    {v.swatches.map((c) => (
+                      <span key={c} style={{ background: c }} />
+                    ))}
+                  </span>
+                  <span>{v.name}</span>
+                </button>
+                <button className="icon-btn small" onClick={() => deleteVariant(v.id)} aria-label={`Supprimer ${v.name}`}>
+                  <Icon name="x" size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         <button className="btn ghost full" onClick={saveVariant}>
-          <Icon name="plus" size={14} /> Enregistrer le coloris actuel
+          <Icon name="plus" size={14} /> Garder ce coloris
         </button>
-      </div>
+      </Section>
     </section>
   )
 }
@@ -62,65 +58,54 @@ const ENV_PRESETS: { value: EnvPreset; label: string }[] = [
 ]
 
 export function ScenePanel() {
-  const s = useStore()
+  // Only the settings: the whole store would re-render the panel on every hover.
+  const s = useStore(
+    useShallow(({ envPreset, envIntensity, background, showEnvBackground, shadows, set }) => ({
+      envPreset,
+      envIntensity,
+      background,
+      showEnvBackground,
+      shadows,
+      set,
+    })),
+  )
 
   return (
-    <section className="panel">
-      <header className="panel-header">
-        <Icon name="sun" />
-        <h2>Scène</h2>
-      </header>
-      <label className="field">
-        <div className="field-label">
+    <section className="panel card-body">
+      <Section title="Scène">
+        <label className="field-row">
           <span>Éclairage</span>
-        </div>
-        <select value={s.envPreset} onChange={(e) => s.set({ envPreset: e.target.value as EnvPreset })}>
-          {ENV_PRESETS.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="field slider">
-        <div className="field-label">
-          <span>Intensité</span>
-          <span className="muted small mono">{s.envIntensity.toFixed(2)}</span>
-        </div>
-        <input
-          type="range"
-          min={0.1}
-          max={2.5}
-          step={0.05}
-          value={s.envIntensity}
-          onChange={(e) => s.set({ envIntensity: parseFloat(e.target.value) })}
-          style={{ '--progress': `${((s.envIntensity - 0.1) / 2.4) * 100}%` } as CSSProperties}
-        />
-      </label>
-      <div className="field inline">
-        <span>Fond</span>
-        <div className="inline-controls">
-          <input
-            type="color"
-            value={s.background}
-            disabled={s.showEnvBackground}
-            onChange={(e) => s.set({ background: e.target.value })}
-            aria-label="Couleur de fond"
-          />
-          <label className="toggle compact">
+          <select value={s.envPreset} onChange={(e) => s.set({ envPreset: e.target.value as EnvPreset })}>
+            {ENV_PRESETS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Slider label="Intensité" value={s.envIntensity} min={0.1} max={2.5} step={0.05} onChange={(envIntensity) => s.set({ envIntensity })} />
+        <div className="field-row">
+          <span>Fond</span>
+          <div className="inline-controls">
             <input
-              type="checkbox"
-              checked={s.showEnvBackground}
-              onChange={(e) => s.set({ showEnvBackground: e.target.checked })}
+              type="color"
+              value={s.background}
+              disabled={s.showEnvBackground}
+              onChange={(e) => s.set({ background: e.target.value })}
+              aria-label="Couleur de fond"
             />
-            <span>Panorama</span>
-          </label>
+            <label className="toggle">
+              <input type="checkbox" checked={s.showEnvBackground} onChange={(e) => s.set({ showEnvBackground: e.target.checked })} />
+              <span>Panorama</span>
+            </label>
+          </div>
         </div>
-      </div>
-      <label className="toggle">
-        <input type="checkbox" checked={s.shadows} onChange={(e) => s.set({ shadows: e.target.checked })} />
-        <span>Ombres au sol</span>
-      </label>
+        <label className="toggle">
+          <input type="checkbox" checked={s.shadows} onChange={(e) => s.set({ shadows: e.target.checked })} />
+          <span>Ombre au sol</span>
+        </label>
+      </Section>
     </section>
   )
 }
+

@@ -1,10 +1,9 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+import dracoWasm from 'three/examples/jsm/libs/draco/gltf/draco_decoder.wasm?url'
+import dracoWrapper from 'three/examples/jsm/libs/draco/gltf/draco_wasm_wrapper.js?url'
 
 export const MODEL_EXTENSIONS = ['glb', 'gltf', 'fbx', 'obj', 'stl'] as const
 export const ACCEPTED_EXTENSIONS = [...MODEL_EXTENSIONS, 'bin', 'png', 'jpg', 'jpeg', 'webp']
@@ -19,19 +18,13 @@ export interface RawModel {
 const extOf = (name: string) => name.split('.').pop()?.toLowerCase() ?? ''
 const baseName = (path: string) => decodeURIComponent(path).split(/[\\/]/).pop() ?? path
 
+// three's own decoder (glTF build), served by Vite. Imported explicitly: three's
+// built-in URLs break in dev, once Vite has pre-bundled it.
 let dracoLoader: DRACOLoader | null = null
-function getDracoLoader() {
-  if (!dracoLoader) {
-    dracoLoader = new DRACOLoader()
-    dracoLoader.setDecoderPath(`${import.meta.env.BASE_URL}draco/`)
-  }
-  return dracoLoader
-}
+const getDracoLoader = () => (dracoLoader ??= new DRACOLoader().setDecoderPath({ js: dracoWrapper, wasm: dracoWasm }))
 
-/**
- * Charge un modèle à partir d'une liste de fichiers. Un .gltf peut être accompagné
- * de ses ressources externes (.bin, textures) : elles sont résolues par nom de fichier.
- */
+// Loads a model from a list of files. A .gltf may come with its external
+// resources (.bin, textures): they are resolved by file name.
 export async function loadModelFromFiles(files: File[]): Promise<RawModel> {
   const main = MODEL_EXTENSIONS.map((ext) => files.find((f) => extOf(f.name) === ext)).find(Boolean)
   if (!main) {
@@ -52,7 +45,7 @@ export async function loadModelFromFiles(files: File[]): Promise<RawModel> {
     root.name ||= main.name.replace(/\.[^.]+$/, '')
     return { root, name: main.name, fileSize: files.reduce((s, f) => s + f.size, 0), format }
   } finally {
-    // Les textures sont décodées une fois chargées : on peut libérer les blobs.
+    // Textures are decoded once loaded: the blobs can go.
     blobUrls.forEach((url) => URL.revokeObjectURL(url))
   }
 }
@@ -64,6 +57,7 @@ export async function loadModelFromUrl(url: string): Promise<RawModel> {
   return loadModelFromFiles([new File([blob], baseName(url))])
 }
 
+// Only glTF is bundled up front (the demo needs it): the other loaders come on demand.
 async function parse(format: string, buffer: ArrayBuffer, manager: THREE.LoadingManager): Promise<THREE.Object3D> {
   switch (format) {
     case 'glb':
@@ -74,11 +68,16 @@ async function parse(format: string, buffer: ArrayBuffer, manager: THREE.Loading
       const gltf = await loader.parseAsync(buffer, '')
       return gltf.scene
     }
-    case 'fbx':
+    case 'fbx': {
+      const { FBXLoader } = await import('three/examples/jsm/loaders/FBXLoader.js')
       return new FBXLoader(manager).parse(buffer, '')
-    case 'obj':
+    }
+    case 'obj': {
+      const { OBJLoader } = await import('three/examples/jsm/loaders/OBJLoader.js')
       return new OBJLoader(manager).parse(new TextDecoder().decode(buffer))
+    }
     case 'stl': {
+      const { STLLoader } = await import('three/examples/jsm/loaders/STLLoader.js')
       const geometry = new STLLoader(manager).parse(buffer)
       geometry.computeVertexNormals()
       const material = new THREE.MeshStandardMaterial({
@@ -97,7 +96,7 @@ async function parse(format: string, buffer: ArrayBuffer, manager: THREE.Loading
   }
 }
 
-/** Récupère les fichiers d'un drop, y compris le contenu des dossiers. */
+// The files of a drop, folders included.
 export async function filesFromDataTransfer(dt: DataTransfer): Promise<File[]> {
   const entries = Array.from(dt.items)
     .map((item) => item.webkitGetAsEntry?.())

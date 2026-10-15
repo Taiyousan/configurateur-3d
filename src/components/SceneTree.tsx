@@ -2,17 +2,18 @@ import * as THREE from 'three'
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { useStore } from '../store'
 import { isMesh, labelOf } from '../lib/materials'
+import { formatBytes, formatCount } from '../lib/format'
 import { Icon } from './Icons'
 
 export function SceneTree() {
   const model = useStore((s) => s.model)
   const selection = useStore((s) => s.selection)
-  useStore((s) => s.revision) // la visibilité est mutée directement sur les objets
+  useStore((s) => s.revision) // visibility is mutated on the objects
   const [expanded, setExpanded] = useState<Set<THREE.Object3D>>(new Set())
   const [query, setQuery] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
-  // Nouveau modèle : on déplie les deux premiers niveaux.
+  // New model: the first two levels open.
   useEffect(() => {
     if (!model) return
     const open = new Set<THREE.Object3D>([model.root])
@@ -21,7 +22,7 @@ export function SceneTree() {
     setQuery('')
   }, [model])
 
-  // Sélection depuis la vue 3D : on déplie ses parents et on la fait défiler dans la liste.
+  // Picked in the 3D view: open its parents and scroll it into view.
   useEffect(() => {
     if (!selection.length) return
     setExpanded((prev) => {
@@ -69,13 +70,16 @@ export function SceneTree() {
 
   return (
     <section className="panel tree-panel">
-      <header className="panel-header">
-        <Icon name="layers" />
-        <h2>Structure</h2>
-        <span className="muted small">{model.stats.meshes} pièces</span>
+      <header className="tree-head">
+        <p className="kicker">Structure</p>
+        <h2 title={model.name}>{model.name}</h2>
+        <p className="meta">
+          {formatBytes(model.fileSize)} · {formatCount(model.stats.triangles)} triangles · {model.stats.meshes} pièce
+          {model.stats.meshes > 1 ? 's' : ''}
+        </p>
       </header>
       <label className="search">
-        <Icon name="search" size={14} />
+        <Icon name="search" size={13} />
         <input
           type="search"
           placeholder="Rechercher une pièce…"

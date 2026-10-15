@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react'
 
-// Icônes au trait inspirées de Lucide (24×24, stroke currentColor).
+// Line icons after Lucide (24×24, stroke currentColor).
 const paths = {
   upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
   download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
@@ -14,7 +14,6 @@ const paths = {
   layers: 'M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   undo: 'M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13',
   redo: 'M21 7v6h-6M3 17a9 9 0 0 1 15-6.7L21 13',
-  rotate: 'M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5',
   focus: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   dice: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01',
   plus: 'M12 5v14M5 12h14',
@@ -23,9 +22,12 @@ const paths = {
   search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
   link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
   arrowUp: 'M12 19V5M5 12l7-7 7 7',
-  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
-  sparkles:
-    'M12 3l1.9 5.8L19.7 11l-5.8 1.9L12 18.7l-1.9-5.8L4.3 11l5.8-1.9L12 3zM5 3v4M3 5h4M19 17v4M17 19h4',
+  help: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
+  pointer: 'M4 4l7 17 2.5-7.5L21 11z',
+  orbit:
+    'M16.5 7.5C15.6 4.2 14 2 12 2 9.2 2 7 6.5 7 12s2.2 10 5 10c.3 0 .7-.1 1-.2M15.2 13.7l3.8 1.9-1.9 3.8M19 15.6c-1.8.9-4.3 1.4-7 1.4-5.5 0-10-2.2-10-5s4.5-5 10-5c4.8 0 8.9 1.7 9.8 4',
+  palette:
+    'M12 22a10 10 0 1 1 10-10c0 2.2-1.8 4-4 4h-1.8a2 2 0 0 0-1.5 3.3c.6.7.1 2.7-2.7 2.7zM7.5 11h.01M10 7h.01M15 7.5h.01M17.5 11h.01',
 } as const
 
 export type IconName = keyof typeof paths
@@ -38,7 +40,7 @@ export function Icon({ name, size = 16, ...props }: { name: IconName; size?: num
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden

@@ -5,8 +5,11 @@ import {
   applySnapshot,
   collectMaterials,
   disposeObject,
+  originalState,
+  PALETTE,
   prepareModel,
   snapshot,
+  writeState,
   type EditableMaterial,
   type PreparedModel,
   type Snapshot,
@@ -15,6 +18,15 @@ import {
 export const DEMO_MODEL_URL = `${import.meta.env.BASE_URL}models/shoe-draco.glb`
 
 export type EnvPreset = 'studio' | 'city' | 'sunset' | 'dawn' | 'warehouse' | 'forest' | 'night'
+
+const SCENE_DEFAULTS = {
+  autoRotate: false,
+  envPreset: 'city' as EnvPreset,
+  envIntensity: 1,
+  showEnvBackground: false,
+  background: '#e3dccd',
+  shadows: true,
+}
 
 export interface LoadedModel extends RawModel, PreparedModel {
   id: number
@@ -34,9 +46,9 @@ interface State {
 
   selection: THREE.Object3D[]
   hovered: THREE.Object3D | null
-  /** Incrémenté à chaque mutation des objets three.js pour rafraîchir l'UI. */
+  /** Bumped on each mutation of the three.js objects, to refresh the UI. */
   revision: number
-  /** Demande de cadrage caméra : `targets` null = tout le modèle. */
+  /** Camera framing request: `targets` null frames the whole model. */
   focus: { targets: THREE.Object3D[] | null; nonce: number }
 
   undoStack: Snapshot[]
@@ -58,7 +70,7 @@ interface State {
   touch: () => void
   focusOn: (target: THREE.Object3D | THREE.Object3D[] | null) => void
 
-  /** À appeler avant une modification de matériaux pour pouvoir l'annuler. */
+  /** Call before changing materials, so the change can be undone. */
   beginEdit: (materials: EditableMaterial[]) => void
   undo: () => void
   redo: () => void
@@ -67,16 +79,28 @@ interface State {
   applyVariant: (id: number) => void
   deleteVariant: (id: number) => void
 
+  resetCamera: () => void
+  /** A random palette colour on every material (undoable). */
+  randomizeColors: () => void
+  /** Every material back to its original state (undoable). */
+  resetMaterials: () => void
+  /** Materials, hidden parts, scene settings and camera. Selection and saved colourways stay. */
+  resetAll: () => void
+
   set: (partial: Partial<State>) => void
 }
 
 let nextId = 1
+let loadToken = 0
 
 export const useStore = create<State>((set, get) => {
   const load = async (loader: () => Promise<RawModel>) => {
+    const token = ++loadToken
     set({ status: 'loading', error: null })
     try {
       const raw = await loader()
+      // Another load started in the meantime: the latest one wins.
+      if (token !== loadToken) return disposeObject(raw.root)
       const prepared = prepareModel(raw.root)
       if (prepared.stats.meshes === 0) throw new Error('Le fichier ne contient aucun mesh affichable.')
       const previous = get().model
@@ -92,6 +116,7 @@ export const useStore = create<State>((set, get) => {
       })
       if (previous) disposeObject(previous.root)
     } catch (e) {
+      if (token !== loadToken) return
       console.error(e)
       set({ status: get().model ? 'ready' : 'error', error: e instanceof Error ? e.message : String(e) })
     }
@@ -110,6 +135,16 @@ export const useStore = create<State>((set, get) => {
     }))
   }
 
+  // Changes every material of the model, as one undoable step.
+  const editAll = (change: (m: EditableMaterial) => void) => {
+    const model = get().model
+    if (!model) return
+    const materials = collectMaterials([model.root])
+    get().beginEdit(materials)
+    materials.forEach(change)
+    get().touch()
+  }
+
   return {
     model: null,
     status: 'idle',
@@ -122,12 +157,7 @@ export const useStore = create<State>((set, get) => {
     redoStack: [],
     variants: [],
 
-    autoRotate: false,
-    envPreset: 'city',
-    envIntensity: 1,
-    showEnvBackground: false,
-    background: '#e9e7e3',
-    shadows: true,
+    ...SCENE_DEFAULTS,
 
     loadFiles: (files) => load(() => loadModelFromFiles(files)),
     loadDemo: () => load(() => loadModelFromUrl(DEMO_MODEL_URL)),
@@ -168,6 +198,18 @@ export const useStore = create<State>((set, get) => {
       get().touch()
     },
     deleteVariant: (id) => set((s) => ({ variants: s.variants.filter((v) => v.id !== id) })),
+
+    resetCamera: () => get().focusOn(null),
+    randomizeColors: () => editAll((m) => m.color.set(PALETTE[Math.floor(Math.random() * PALETTE.length)])),
+    resetMaterials: () => editAll((m) => writeState(m, originalState(m))),
+    resetAll: () => {
+      const model = get().model
+      if (!model) return
+      get().resetMaterials()
+      model.root.traverse((o) => (o.visible = true))
+      set((s) => ({ ...SCENE_DEFAULTS, revision: s.revision + 1 }))
+      get().resetCamera()
+    },
 
     set: (partial) => set(partial),
   }

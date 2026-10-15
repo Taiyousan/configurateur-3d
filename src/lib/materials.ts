@@ -11,11 +11,17 @@ export interface MaterialState {
 
 export type Snapshot = Map<EditableMaterial, MaterialState>
 
-/** État d'origine de chaque matériau, pour la réinitialisation. */
+// A strip of paint chips: neutrals on the first row, colours by hue on the second.
+export const PALETTE = [
+  '#ffffff', '#f1e8d4', '#e6d3ae', '#c9ced6', '#7d8088', '#34353b', '#1d1e22', '#7b5b3e', '#a4493a',
+  '#b8433a', '#d9713a', '#d29a3a', '#e2b54c', '#3f7a4a', '#2e4a36', '#2f7f82', '#2f4f7f', '#6b3f63',
+]
+
+// Each material's original state, for resets.
 const originals = new WeakMap<THREE.Material, MaterialState>()
-/** Textures retirées par l'utilisateur, pour pouvoir les remettre. */
+// Textures the user turned off, to put them back.
 const removedMaps = new WeakMap<THREE.Material, THREE.Texture>()
-/** Matériau source (avant clonage) : permet de retrouver les pièces qui le partageaient. */
+// Source material (before cloning): finds the parts that shared it.
 const sourceIds = new WeakMap<THREE.Material, string>()
 
 export const isMesh = (o: THREE.Object3D): o is THREE.Mesh => (o as THREE.Mesh).isMesh === true
@@ -29,7 +35,7 @@ const isStandard = (m: THREE.Material): m is THREE.MeshStandardMaterial =>
 export const materialsOf = (mesh: THREE.Mesh): THREE.Material[] =>
   Array.isArray(mesh.material) ? mesh.material : [mesh.material]
 
-/** Matériaux éditables (uniques) de tous les meshes visibles sous les objets donnés. */
+// Unique editable materials of every mesh under the given objects.
 export function collectMaterials(objects: THREE.Object3D[]): EditableMaterial[] {
   const set = new Set<EditableMaterial>()
   for (const obj of objects) {
@@ -89,7 +95,7 @@ export const snapshot = (materials: EditableMaterial[]): Snapshot =>
 
 export const applySnapshot = (snap: Snapshot) => snap.forEach((state, m) => writeState(m, state))
 
-/** Les loaders OBJ/FBX produisent des matériaux Phong/Lambert : on les convertit en PBR. */
+// OBJ/FBX loaders give Phong/Lambert materials: turned into PBR.
 function toStandard(m: THREE.Material): THREE.Material {
   if (!(m instanceof THREE.MeshPhongMaterial || m instanceof THREE.MeshLambertMaterial)) return m.clone()
   const std = new THREE.MeshStandardMaterial({
@@ -117,18 +123,16 @@ export interface ModelStats {
 }
 
 export interface PreparedModel {
-  /** Objets contenant au moins un mesh : ce sont eux qu'on affiche dans l'arborescence. */
+  /** Objects holding at least one mesh: the ones the scene tree lists. */
   meaningful: Set<THREE.Object3D>
   stats: ModelStats
-  /** Mise à l'échelle et recentrage pour que le modèle tienne dans ~2 unités, posé au sol. */
+  /** Scale and offset so the model fits in ~2 units, standing on the ground. */
   scale: number
   offset: THREE.Vector3
 }
 
-/**
- * Clone chaque matériau par mesh pour que chaque pièce soit éditable indépendamment,
- * mémorise les états d'origine et calcule statistiques et cadrage.
- */
+// Clones each mesh's materials so every part can be edited on its own,
+// keeps their original state, and works out stats and framing.
 export function prepareModel(root: THREE.Object3D): PreparedModel {
   const meaningful = new Set<THREE.Object3D>()
   const sourceMaterials = new Set<string>()
@@ -191,7 +195,7 @@ export function disposeObject(root: THREE.Object3D) {
   })
 }
 
-/** Nom lisible : pour un mesh, le nom de son matériau est souvent plus parlant. */
+// Display name: for a mesh, its material's name usually says more.
 export function labelOf(o: THREE.Object3D): string {
   if (isMesh(o)) {
     const mats = materialsOf(o)
