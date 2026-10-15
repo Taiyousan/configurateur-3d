@@ -72,7 +72,7 @@ export function ScenePanel() {
 
   return (
     <section className="panel card-body">
-      <Section title="Scène">
+      <Section title="Scène" collapsible>
         <label className="field-row">
           <span>Éclairage</span>
           <select value={s.envPreset} onChange={(e) => s.set({ envPreset: e.target.value as EnvPreset })}>

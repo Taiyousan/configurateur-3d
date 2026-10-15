@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { site } from '../site'
+import { SAMPLES } from '../lib/samples'
 import { Icon } from './Icons'
 
 const TABS = [
@@ -160,17 +161,24 @@ function About() {
         <div className="section-head">
           <h3>Crédits</h3>
         </div>
-        <p className="small">
-          Chaussure :{' '}
-          <a href="https://github.com/pmndrs/examples" target="_blank" rel="noreferrer">
-            pmndrs/examples
-          </a>{' '}
-          (MIT) · Éclairages :{' '}
-          <a href="https://polyhaven.com" target="_blank" rel="noreferrer">
-            Poly Haven
-          </a>{' '}
-          (CC0)
-        </p>
+        <ul className="credits small">
+          {SAMPLES.map((s) => (
+            <li key={s.id}>
+              {s.name} :{' '}
+              <a href={s.credit.source} target="_blank" rel="noreferrer">
+                {s.credit.author}
+              </a>{' '}
+              ({s.credit.license})
+            </li>
+          ))}
+          <li>
+            Éclairages :{' '}
+            <a href="https://polyhaven.com" target="_blank" rel="noreferrer">
+              Poly Haven
+            </a>{' '}
+            (CC0)
+          </li>
+        </ul>
       </section>
     </>
   )

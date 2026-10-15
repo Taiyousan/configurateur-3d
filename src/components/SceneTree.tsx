@@ -8,6 +8,7 @@ import { Icon } from './Icons'
 export function SceneTree() {
   const model = useStore((s) => s.model)
   const selection = useStore((s) => s.selection)
+  const showDetails = useStore((s) => s.showDetails)
   useStore((s) => s.revision) // visibility is mutated on the objects
   const [expanded, setExpanded] = useState<Set<THREE.Object3D>>(new Set())
   const [query, setQuery] = useState('')
@@ -71,12 +72,27 @@ export function SceneTree() {
   return (
     <section className="panel tree-panel">
       <header className="tree-head">
-        <p className="kicker">Structure</p>
-        <h2 title={model.name}>{model.name}</h2>
-        <p className="meta">
-          {formatBytes(model.fileSize)} · {formatCount(model.stats.triangles)} triangles · {model.stats.meshes} pièce
-          {model.stats.meshes > 1 ? 's' : ''}
-        </p>
+        <div className="card-head-row">
+          <div className="title-block">
+            <p className="kicker">Structure</p>
+            <h2 title={model.name}>{model.name}</h2>
+          </div>
+          <button
+            className={`icon-btn small${showDetails ? ' active' : ''}`}
+            onClick={() => useStore.getState().set({ showDetails: !showDetails })}
+            aria-pressed={showDetails}
+            aria-label="Détails techniques"
+            title="Détails techniques"
+          >
+            <Icon name="info" size={14} />
+          </button>
+        </div>
+        {showDetails && (
+          <p className="meta">
+            {formatBytes(model.fileSize)} · {formatCount(model.stats.triangles)} triangles · {model.stats.meshes} pièce
+            {model.stats.meshes > 1 ? 's' : ''}
+          </p>
+        )}
       </header>
       <label className="search">
         <Icon name="search" size={13} />
@@ -116,9 +132,10 @@ interface RowProps {
 
 function TreeRow({ object, depth, expandable, expanded, selected, onToggle }: RowProps) {
   const hovered = useStore((s) => s.hovered === object)
+  const showDetails = useStore((s) => s.showDetails)
   const { select, setHovered, focusOn, touch } = useStore.getState()
   const label = labelOf(object)
-  const secondary = object.name && object.name !== label ? object.name : null
+  const secondary = showDetails && object.name && object.name !== label ? object.name : null
 
   const onClick = (e: MouseEvent) => select(object, e.shiftKey || e.ctrlKey || e.metaKey)
   const toggleVisibility = (e: MouseEvent) => {

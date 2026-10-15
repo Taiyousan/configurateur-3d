@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { create } from 'zustand'
 import { loadModelFromFiles, loadModelFromUrl, type RawModel } from './lib/loadModel'
+import { DEFAULT_SAMPLE, SAMPLES, sampleUrl } from './lib/samples'
 import {
   applySnapshot,
   collectMaterials,
@@ -14,8 +15,6 @@ import {
   type PreparedModel,
   type Snapshot,
 } from './lib/materials'
-
-export const DEMO_MODEL_URL = `${import.meta.env.BASE_URL}models/shoe-draco.glb`
 
 export type EnvPreset = 'studio' | 'city' | 'sunset' | 'dawn' | 'warehouse' | 'forest' | 'night'
 
@@ -41,6 +40,8 @@ export interface Variant {
 
 interface State {
   model: LoadedModel | null
+  /** The example on screen, null for an imported file. */
+  sampleId: string | null
   status: 'idle' | 'loading' | 'ready' | 'error'
   error: string | null
 
@@ -48,6 +49,8 @@ interface State {
   hovered: THREE.Object3D | null
   /** Bumped on each mutation of the three.js objects, to refresh the UI. */
   revision: number
+  /** File stats and technical names, hidden by default. */
+  showDetails: boolean
   /** Camera framing request: `targets` null frames the whole model. */
   focus: { targets: THREE.Object3D[] | null; nonce: number }
 
@@ -63,7 +66,7 @@ interface State {
   shadows: boolean
 
   loadFiles: (files: File[]) => Promise<void>
-  loadDemo: () => Promise<void>
+  loadSample: (id?: string) => Promise<void>
   select: (obj: THREE.Object3D | null, additive?: boolean) => void
   setSelection: (objs: THREE.Object3D[]) => void
   setHovered: (obj: THREE.Object3D | null) => void
@@ -94,7 +97,7 @@ let nextId = 1
 let loadToken = 0
 
 export const useStore = create<State>((set, get) => {
-  const load = async (loader: () => Promise<RawModel>) => {
+  const load = async (loader: () => Promise<RawModel>, sampleId: string | null = null) => {
     const token = ++loadToken
     set({ status: 'loading', error: null })
     try {
@@ -106,6 +109,7 @@ export const useStore = create<State>((set, get) => {
       const previous = get().model
       set({
         model: { ...raw, ...prepared, id: nextId++ },
+        sampleId,
         status: 'ready',
         selection: [],
         hovered: null,
@@ -147,11 +151,13 @@ export const useStore = create<State>((set, get) => {
 
   return {
     model: null,
+    sampleId: null,
     status: 'idle',
     error: null,
     selection: [],
     hovered: null,
     revision: 0,
+    showDetails: false,
     focus: { targets: null, nonce: 0 },
     undoStack: [],
     redoStack: [],
@@ -160,7 +166,10 @@ export const useStore = create<State>((set, get) => {
     ...SCENE_DEFAULTS,
 
     loadFiles: (files) => load(() => loadModelFromFiles(files)),
-    loadDemo: () => load(() => loadModelFromUrl(DEMO_MODEL_URL)),
+    loadSample: (id = DEFAULT_SAMPLE.id) => {
+      const sample = SAMPLES.find((s) => s.id === id) ?? DEFAULT_SAMPLE
+      return load(() => loadModelFromUrl(sampleUrl(sample)), sample.id)
+    },
 
     select: (obj, additive = false) => {
       if (!obj) return set({ selection: [] })

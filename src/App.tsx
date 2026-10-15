@@ -5,7 +5,7 @@ import { Toolbar } from './components/Toolbar'
 import { SceneTree } from './components/SceneTree'
 import { MaterialPanel } from './components/MaterialPanel'
 import { ScenePanel, VariantsPanel } from './components/SidePanels'
-import { DropZone, HoverLabel, StatusOverlay } from './components/Overlays'
+import { ControlsPanel, DropZone, HoverLabel, StatusOverlay } from './components/Overlays'
 import { HelpDialog } from './components/HelpDialog'
 import { Icon } from './components/Icons'
 
@@ -62,7 +62,7 @@ export default function App() {
   useShortcuts(openHelp)
   useEffect(() => {
     // Guard against StrictMode's double mount in dev.
-    if (useStore.getState().status === 'idle') useStore.getState().loadDemo()
+    if (useStore.getState().status === 'idle') useStore.getState().loadSample()
   }, [])
 
   return (
@@ -88,12 +88,7 @@ export default function App() {
             <VariantsPanel />
             <ScenePanel />
           </aside>
-          <footer className="hints">
-            <span><kbd>Clic</kbd> sélectionner</span>
-            <span><kbd>Maj</kbd> + <kbd>Clic</kbd> ajouter</span>
-            <span><kbd>Double-clic</kbd> zoomer</span>
-            <span><kbd>?</kbd> aide</span>
-          </footer>
+          <ControlsPanel />
         </>
       )}
 

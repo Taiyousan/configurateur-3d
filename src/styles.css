@@ -71,6 +71,11 @@ a:hover {
 .small {
   font-size: 12px;
 }
+.credits {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+}
 .mono {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
@@ -144,6 +149,43 @@ a:hover {
 }
 .name-card a:hover {
   color: var(--accent);
+}
+
+/* Drop-down list under a toolbar button. */
+.menu {
+  position: relative;
+}
+.menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 4px;
+  background: var(--paper);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(38, 33, 27, 0.12);
+  animation: fade-in 0.12s ease-out;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.menu-item:hover {
+  background: var(--paper-2);
+}
+.menu-item[aria-current='true'] {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* What the hovered icon button does, next to the buttons. */
@@ -298,6 +340,31 @@ a:hover {
   text-transform: uppercase;
   color: var(--accent);
 }
+.section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.section-toggle:hover {
+  background: var(--paper-2);
+}
+/* A down chevron that points up once its content is open. */
+.flip {
+  transition: transform 0.15s;
+}
+.flip.open {
+  transform: rotate(180deg);
+}
 .section-aside {
   font-size: 12px;
   color: var(--ink);
@@ -397,6 +464,9 @@ a:hover {
   height: 28px;
   color: var(--muted);
 }
+.icon-btn.small.active {
+  color: var(--paper);
+}
 .icon-btn.on-ink {
   width: 30px;
   height: 30px;
@@ -479,6 +549,9 @@ a:hover {
 .tree-head .kicker {
   color: var(--accent);
   opacity: 1;
+}
+.tree-head .card-head-row {
+  align-items: center;
 }
 .tree-head h2 {
   margin-top: 4px;
@@ -843,8 +916,9 @@ input[type='color']:disabled {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  align-items: center;
   gap: 16px;
-  padding: 8px 14px;
+  padding: 4px;
   border-radius: var(--radius-sm);
   background: var(--paper);
   border: 1px solid var(--edge);
@@ -855,8 +929,34 @@ input[type='color']:disabled {
   color: var(--muted);
   white-space: nowrap;
   z-index: 4;
-  pointer-events: none;
 }
+.hints.open {
+  padding-right: 14px;
+}
+.hints-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+.hints-toggle:hover {
+  background: var(--paper-2);
+}
+.hints-toggle svg {
+  transition: transform 0.15s;
+}
+.hints.open .hints-toggle svg {
+  transform: rotate(180deg);
+}
+
 kbd {
   font-family: var(--mono);
   font-size: 10px;
@@ -975,8 +1075,15 @@ kbd {
   text-transform: uppercase;
   letter-spacing: -0.01em;
 }
-.welcome .btn {
-  margin-top: 10px;
+.welcome .welcome-or {
+  margin-top: 14px;
+  color: var(--muted);
+}
+.welcome-samples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
 }
 
 .toast {
@@ -1182,6 +1289,7 @@ kbd {
   }
 }
 
+/* Not enough room between the side panels. */
 @media (max-width: 1100px) {
   .hints {
     display: none;
