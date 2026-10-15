@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { filesFromDataTransfer, MODEL_EXTENSIONS } from '../lib/loadModel'
 import { labelOf } from '../lib/materials'
+import { SAMPLES } from '../lib/samples'
 import { Icon } from './Icons'
 
 // Full-screen drop target, shown as soon as files are dragged over the page.
@@ -61,6 +62,27 @@ export function DropZone() {
   )
 }
 
+// The mouse controls, folded into a button at the bottom of the view.
+export function ControlsPanel() {
+  const [open, setOpen] = useState(false)
+  return (
+    <footer className={`hints${open ? ' open' : ''}`}>
+      <button className="hints-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        Commandes
+        <Icon name="chevron" size={12} />
+      </button>
+      {open && (
+        <>
+          <span><kbd>Clic</kbd> sélectionner</span>
+          <span><kbd>Maj</kbd> + <kbd>Clic</kbd> ajouter</span>
+          <span><kbd>Double-clic</kbd> zoomer</span>
+          <span><kbd>?</kbd> aide</span>
+        </>
+      )}
+    </footer>
+  )
+}
+
 // The hovered part's name, following the pointer.
 export function HoverLabel() {
   const hovered = useStore((s) => s.hovered)
@@ -106,9 +128,14 @@ export function StatusOverlay() {
           <p className="kicker">Aucun modèle</p>
           <h2>Déposez un fichier 3D ici</h2>
           <p className="muted">GLB, glTF, FBX, OBJ ou STL</p>
-          <button className="btn primary" onClick={() => useStore.getState().loadDemo()}>
-            Charger la démo
-          </button>
+          <p className="kicker welcome-or">Ou partez d'un exemple</p>
+          <div className="welcome-samples">
+            {SAMPLES.map((s) => (
+              <button key={s.id} className="btn" onClick={() => useStore.getState().loadSample(s.id)}>
+                {s.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {error && (

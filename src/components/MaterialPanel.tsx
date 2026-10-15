@@ -15,7 +15,7 @@ import {
   type MaterialState,
 } from '../lib/materials'
 import { Icon } from './Icons'
-import { Section, Slider } from './ui'
+import { FoldButton, Section, Slider } from './ui'
 
 const FINISHES = [
   { label: 'Mat', roughness: 0.95, metalness: 0 },
@@ -29,7 +29,10 @@ const HEX_RE = /^#?([0-9a-f]{6})$/i
 export function MaterialPanel() {
   const model = useStore((s) => s.model)
   const selection = useStore((s) => s.selection)
+  const showDetails = useStore((s) => s.showDetails)
   useStore((s) => s.revision)
+  const [customColor, setCustomColor] = useState(false)
+  const [fineTuning, setFineTuning] = useState(false)
   const { beginEdit, touch, setSelection, select, focusOn } = useStore.getState()
 
   const materials = useMemo(() => collectMaterials(selection), [selection])
@@ -54,7 +57,7 @@ export function MaterialPanel() {
         <div className="card-body empty-state">
           <Icon name="pointer" size={20} />
           <p>Cliquez sur une pièce du modèle, ou dans la structure, pour changer sa couleur et sa finition.</p>
-          <p className="muted small">Maj + clic pour en sélectionner plusieurs.</p>
+          <p className="muted small">Maj + clic pour en sélectionner plusieurs, double-clic pour zoomer.</p>
         </div>
       </section>
     )
@@ -86,7 +89,9 @@ export function MaterialPanel() {
         <div className="card-head-row">
           <div className="title-block">
             <p className="kicker">
-              {meshes.length} mesh{meshes.length > 1 ? 'es' : ''} · {materials.length} matériau{materials.length > 1 ? 'x' : ''}
+              {showDetails
+                ? `${meshes.length} mesh${meshes.length > 1 ? 'es' : ''} · ${materials.length} matériau${materials.length > 1 ? 'x' : ''}`
+                : 'Sélection'}
             </p>
             <h2 title={title}>{title}</h2>
           </div>
@@ -116,7 +121,10 @@ export function MaterialPanel() {
           <p className="muted small">Cette sélection ne contient aucun matériau modifiable.</p>
         ) : (
           <>
-            <Section title="Couleur" aside={<span className="mono">{mixed ? 'Plusieurs' : state.color.toUpperCase()}</span>}>
+            <Section
+              title="Couleur"
+              aside={<FoldButton label="Sur mesure" open={customColor} onToggle={() => setCustomColor((o) => !o)} />}
+            >
               <div className="chips" role="radiogroup" aria-label="Couleurs">
                 {PALETTE.map((color) => (
                   <button
@@ -130,14 +138,21 @@ export function MaterialPanel() {
                   />
                 ))}
               </div>
-              <div onPointerDownCapture={() => beginEdit(materials)} onKeyDownCapture={() => beginEdit(materials)}>
-                <HexColorPicker color={state.color} onChange={(color) => apply({ color }, false)} />
-              </div>
-              <HexInput value={state.color} onCommit={(color) => apply({ color })} />
+              {customColor && (
+                <>
+                  <div onPointerDownCapture={() => beginEdit(materials)} onKeyDownCapture={() => beginEdit(materials)}>
+                    <HexColorPicker color={state.color} onChange={(color) => apply({ color }, false)} />
+                  </div>
+                  <HexInput value={mixed ? '' : state.color} onCommit={(color) => apply({ color })} />
+                </>
+              )}
             </Section>
 
             {state.roughness != null && (
-              <Section title="Finition">
+              <Section
+                title="Finition"
+                aside={<FoldButton label="Ajuster" open={fineTuning} onToggle={() => setFineTuning((o) => !o)} />}
+              >
                 <div className="segmented">
                   {FINISHES.map((f) => (
                     <button
@@ -149,8 +164,12 @@ export function MaterialPanel() {
                     </button>
                   ))}
                 </div>
-                <Slider label="Rugosité" value={state.roughness} onBegin={() => beginEdit(materials)} onChange={(roughness) => apply({ roughness }, false)} />
-                <Slider label="Métal" value={state.metalness ?? 0} onBegin={() => beginEdit(materials)} onChange={(metalness) => apply({ metalness }, false)} />
+                {fineTuning && (
+                  <>
+                    <Slider label="Rugosité" value={state.roughness} onBegin={() => beginEdit(materials)} onChange={(roughness) => apply({ roughness }, false)} />
+                    <Slider label="Métal" value={state.metalness ?? 0} onBegin={() => beginEdit(materials)} onChange={(metalness) => apply({ metalness }, false)} />
+                  </>
+                )}
               </Section>
             )}
 
@@ -183,6 +202,7 @@ function HexInput({ value, onCommit }: { value: string; onCommit: (hex: string) 
     <input
       className="hex-input"
       value={text}
+      placeholder="Plusieurs"
       spellCheck={false}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}

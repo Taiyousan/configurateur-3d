@@ -5,6 +5,7 @@ import { ACCEPTED_EXTENSIONS } from '../lib/loadModel'
 import { exportGLB, takeScreenshot } from '../lib/exporters'
 import { rendererRef } from './Viewer'
 import { Icon, type IconName } from './Icons'
+import { SampleMenu } from './SampleMenu'
 
 interface IconAction {
   id: string
@@ -27,7 +28,7 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
   const canUndo = useStore((s) => s.undoStack.length > 0)
   const canRedo = useStore((s) => s.redoStack.length > 0)
   const autoRotate = useStore((s) => s.autoRotate)
-  const { loadFiles, loadDemo, undo, redo, resetCamera, resetMaterials, resetAll, set } = useStore.getState()
+  const { loadFiles, undo, redo, resetCamera, resetMaterials, resetAll, set } = useStore.getState()
   const input = useRef<HTMLInputElement>(null)
   const [exporting, setExporting] = useState(false)
   const [hintId, setHintId] = useState<string | null>(null)
@@ -160,9 +161,7 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
             ))}
           </div>
         ))}
-        <button className="btn hide-sm" onClick={loadDemo}>
-          Démo
-        </button>
+        <SampleMenu />
         <button className="btn primary" onClick={() => input.current?.click()}>
           <Icon name="upload" size={15} /> <span className="hide-sm">Importer</span>
         </button>

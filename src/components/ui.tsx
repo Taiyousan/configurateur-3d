@@ -1,14 +1,43 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
+import { Icon } from './Icons'
 
-export function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
+interface SectionProps {
+  title: string
+  aside?: ReactNode
+  /** Folds behind its title, closed at first. */
+  collapsible?: boolean
+  children: ReactNode
+}
+
+export function Section({ title, aside, collapsible = false, children }: SectionProps) {
+  const [open, setOpen] = useState(!collapsible)
   return (
     <section className="section">
       <div className="section-head">
-        <h3>{title}</h3>
-        {aside && <span className="section-aside">{aside}</span>}
+        <h3>
+          {collapsible ? (
+            <button className="section-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+              {title}
+              <Icon name="chevronDown" size={12} className={`flip${open ? ' open' : ''}`} />
+            </button>
+          ) : (
+            title
+          )}
+        </h3>
+        {aside && open && <span className="section-aside">{aside}</span>}
       </div>
-      {children}
+      {open && children}
     </section>
+  )
+}
+
+// Small text button in a section head that shows or hides extra controls.
+export function FoldButton({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
+  return (
+    <button className="text-btn" aria-expanded={open} onClick={onToggle}>
+      {label}
+      <Icon name="chevronDown" size={12} className={`flip${open ? ' open' : ''}`} />
+    </button>
   )
 }
 
