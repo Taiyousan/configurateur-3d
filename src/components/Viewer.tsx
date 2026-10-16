@@ -44,7 +44,8 @@ export function Viewer() {
       gl={{ preserveDrawingBuffer: true, antialias: false }}
       onCreated={onCreated}
       onPointerMissed={(e) => {
-        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) useStore.getState().select(null)
+        const { multiSelect, select } = useStore.getState()
+        if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !multiSelect) select(null)
       }}
     >
       {!showEnvBackground && <color attach="background" args={[background]} />}
@@ -60,6 +61,7 @@ export function Viewer() {
         <ContactShadows position={[0, -0.001, 0]} opacity={0.55} scale={7} blur={2.2} far={2.5} resolution={1024} />
       )}
       <Controls />
+      <ViewOffset />
       <Effects />
       <RenderOnChange />
     </Canvas>
@@ -74,16 +76,21 @@ function RenderOnChange() {
   return null
 }
 
+// A tap is followed by no hover state, and no dblclick event on touch screens.
+const isMouse = (e: Event) => (e as PointerEvent).pointerType === 'mouse'
+const DOUBLE_TAP_MS = 300
+
 function Model() {
   const model = useStore((s) => s.model)
   const { select, setHovered, focusOn } = useStore.getState()
+  const lastTap = useRef<{ object: THREE.Object3D; time: number } | null>(null)
 
   if (!model) return null
 
   // Handlers sit on the root: R3F calls them for each hit, nearest first,
   // until propagation is stopped.
   const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (!isShown(e.object)) return
+    if (e.nativeEvent.pointerType === 'touch' || !isShown(e.object)) return
     e.stopPropagation()
     setHovered(e.object)
   }
@@ -92,6 +99,15 @@ function Model() {
     e.stopPropagation()
     if (e.delta > 4) return // a drag to orbit, not a click
     const additive = e.nativeEvent.shiftKey || e.nativeEvent.ctrlKey || e.nativeEvent.metaKey
+    if (!isMouse(e.nativeEvent)) {
+      const previous = lastTap.current
+      const now = performance.now()
+      lastTap.current = { object: e.object, time: now }
+      if (previous?.object === e.object && now - previous.time < DOUBLE_TAP_MS) {
+        lastTap.current = null
+        return focusOn(e.object)
+      }
+    }
     select(e.object, additive)
   }
   const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -121,6 +137,7 @@ function Controls() {
   const focus = useStore((s) => s.focus)
   const autoRotate = useStore((s) => s.autoRotate)
   const invalidate = useThree((s) => s.invalidate)
+  const get = useThree((s) => s.get)
   const interacting = useRef(false)
 
   useEffect(() => {
@@ -146,13 +163,17 @@ function Controls() {
     if (!controls || !targets.length || !focus.nonce) return
     targets.forEach((t) => t.updateWorldMatrix(true, true))
     if (!focus.targets) controls.rotateTo(Math.PI / 5, Math.PI / 2.6, true)
-    // The bounding box's sphere (looser than the exact one), plus room for the panels.
+    // The bounding box's sphere (looser than the exact one), with a margin, sized
+    // to the part of the view left free by the panels (see ViewOffset).
     const box = new THREE.Box3()
     targets.forEach((t) => box.expandByObject(t, true))
     const sphere = box.getBoundingSphere(new THREE.Sphere())
-    sphere.radius *= 1.15
+    const { width, height } = get().size
+    const { top, right, bottom, left } = useStore.getState().viewInsets
+    const free = Math.min(width - left - right, height - top - bottom)
+    sphere.radius *= 1.15 * Math.max(1, Math.min(width, height) / Math.max(free, 1))
     controls.fitToSphere(sphere, true)
-  }, [focus])
+  }, [focus, get])
 
   useFrame((state, delta) => {
     if (!autoRotate || interacting.current) return
@@ -161,6 +182,37 @@ function Controls() {
   })
 
   return <CameraControls ref={ref} makeDefault minDistance={0.2} maxDistance={25} dollyToCursor smoothTime={0.3} />
+}
+
+// Moves the centre of the picture to the centre of the free part of the view, so
+// the model isn't hidden under the panels. Picking follows, as it goes through
+// the same projection. Eased, as the panels open and close.
+function ViewOffset() {
+  const insets = useStore((s) => s.viewInsets)
+  // Null until the first frame, which takes the target as it is.
+  const offset = useRef<{ x: number; y: number } | null>(null)
+
+  useFrame(({ camera, size, invalidate }, delta) => {
+    if (!(camera instanceof THREE.PerspectiveCamera)) return
+    const target = { x: (insets.right - insets.left) / 2, y: (insets.bottom - insets.top) / 2 }
+    const current = (offset.current ??= { ...target })
+    if (Math.abs(target.x - current.x) < 0.5 && Math.abs(target.y - current.y) < 0.5) Object.assign(current, target)
+    else {
+      const k = 1 - Math.exp(-delta * 12)
+      current.x += (target.x - current.x) * k
+      current.y += (target.y - current.y) * k
+      invalidate()
+    }
+    const view = camera.view
+    const unchanged =
+      view?.enabled &&
+      view.fullWidth === size.width &&
+      view.fullHeight === size.height &&
+      view.offsetX === current.x &&
+      view.offsetY === current.y
+    if (!unchanged) camera.setViewOffset(size.width, size.height, current.x, current.y, size.width, size.height)
+  })
+  return null
 }
 
 function Effects() {

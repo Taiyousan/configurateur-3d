@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { create } from 'zustand'
 import { loadModelFromFiles, loadModelFromUrl, type RawModel } from './lib/loadModel'
 import { DEFAULT_SAMPLE, SAMPLES, sampleUrl } from './lib/samples'
+import type { Insets } from './lib/layout'
 import {
   applySnapshot,
   collectMaterials,
@@ -46,6 +47,8 @@ interface State {
   error: string | null
 
   selection: THREE.Object3D[]
+  /** Taps add to the selection, as Shift does with a mouse. */
+  multiSelect: boolean
   hovered: THREE.Object3D | null
   /** Bumped on each mutation of the three.js objects, to refresh the UI. */
   revision: number
@@ -53,6 +56,8 @@ interface State {
   showDetails: boolean
   /** Camera framing request: `targets` null frames the whole model. */
   focus: { targets: THREE.Object3D[] | null; nonce: number }
+  /** The part of the view under the panels, left out of the framing. */
+  viewInsets: Insets
 
   undoStack: Snapshot[]
   redoStack: Snapshot[]
@@ -112,6 +117,7 @@ export const useStore = create<State>((set, get) => {
         sampleId,
         status: 'ready',
         selection: [],
+        multiSelect: false,
         hovered: null,
         undoStack: [],
         redoStack: [],
@@ -155,10 +161,12 @@ export const useStore = create<State>((set, get) => {
     status: 'idle',
     error: null,
     selection: [],
+    multiSelect: false,
     hovered: null,
     revision: 0,
     showDetails: false,
     focus: { targets: null, nonce: 0 },
+    viewInsets: { top: 0, right: 0, bottom: 0, left: 0 },
     undoStack: [],
     redoStack: [],
     variants: [],
@@ -172,10 +180,11 @@ export const useStore = create<State>((set, get) => {
     },
 
     select: (obj, additive = false) => {
-      if (!obj) return set({ selection: [] })
+      if (!obj) return set({ selection: [], multiSelect: false })
       const current = get().selection
-      if (!additive) return set({ selection: [obj] })
-      set({ selection: current.includes(obj) ? current.filter((o) => o !== obj) : [...current, obj] })
+      if (!additive && !get().multiSelect) return set({ selection: [obj] })
+      const selection = current.includes(obj) ? current.filter((o) => o !== obj) : [...current, obj]
+      set({ selection, multiSelect: get().multiSelect && selection.length > 0 })
     },
     setSelection: (objs) => set({ selection: objs }),
     setHovered: (obj) => get().hovered !== obj && set({ hovered: obj }),
