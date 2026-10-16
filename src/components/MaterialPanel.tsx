@@ -31,8 +31,8 @@ export function MaterialPanel() {
   const selection = useStore((s) => s.selection)
   const showDetails = useStore((s) => s.showDetails)
   useStore((s) => s.revision)
-  const [customColor, setCustomColor] = useState(false)
-  const [fineTuning, setFineTuning] = useState(false)
+  const [customColor, setCustomColor] = useState(true)
+  const [fineTuning, setFineTuning] = useState(true)
   const { beginEdit, touch, setSelection, select, focusOn } = useStore.getState()
 
   const materials = useMemo(() => collectMaterials(selection), [selection])
@@ -123,7 +123,7 @@ export function MaterialPanel() {
           <>
             <Section
               title="Couleur"
-              aside={<FoldButton label="Sur mesure" open={customColor} onToggle={() => setCustomColor((o) => !o)} />}
+              aside={<FoldButton label="Couleur sur mesure" open={customColor} onToggle={() => setCustomColor((o) => !o)} />}
             >
               <div className="chips" role="radiogroup" aria-label="Couleurs">
                 {PALETTE.map((color) => (
@@ -151,7 +151,7 @@ export function MaterialPanel() {
             {state.roughness != null && (
               <Section
                 title="Finition"
-                aside={<FoldButton label="Ajuster" open={fineTuning} onToggle={() => setFineTuning((o) => !o)} />}
+                aside={<FoldButton label="Réglages fins" open={fineTuning} onToggle={() => setFineTuning((o) => !o)} />}
               >
                 <div className="segmented">
                   {FINISHES.map((f) => (

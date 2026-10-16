@@ -31,11 +31,10 @@ export function Section({ title, aside, collapsible = false, children }: Section
   )
 }
 
-// Small text button in a section head that shows or hides extra controls.
+// Chevron in a section head that shows or hides extra controls; the label is only announced.
 export function FoldButton({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
   return (
-    <button className="text-btn" aria-expanded={open} onClick={onToggle}>
-      {label}
+    <button className="text-btn" aria-expanded={open} aria-label={label} title={label} onClick={onToggle}>
       <Icon name="chevronDown" size={12} className={`flip${open ? ' open' : ''}`} />
     </button>
   )
