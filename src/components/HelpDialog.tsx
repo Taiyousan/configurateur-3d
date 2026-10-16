@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { site } from '../site'
 import { SAMPLES } from '../lib/samples'
+import { useTouch } from '../lib/layout'
 import { Icon } from './Icons'
 
 const TABS = [
@@ -10,10 +11,10 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id']
 
 const STEPS = [
-  { title: 'Importer', text: 'Glissez un fichier 3D sur la page.' },
-  { title: 'Sélectionner', text: 'Cliquez sur une pièce.' },
-  { title: 'Personnaliser', text: 'Couleur et finition, à droite.' },
-  { title: 'Exporter', text: 'En image PNG ou en .glb.' },
+  { title: 'Importer', text: 'Glissez un fichier 3D sur la page.', touch: 'Le bouton en haut, à droite.' },
+  { title: 'Sélectionner', text: 'Cliquez sur une pièce.', touch: 'Touchez une pièce.' },
+  { title: 'Personnaliser', text: 'Couleur et finition, à droite.', touch: 'Choisissez sa couleur et sa finition.' },
+  { title: 'Exporter', text: 'En image PNG ou en .glb.', touch: 'En image PNG ou en .glb.' },
 ]
 
 const SHORTCUTS = [
@@ -21,6 +22,13 @@ const SHORTCUTS = [
   { keys: ['Double-clic'], action: 'Zoomer sur la pièce' },
   { keys: ['Ctrl', 'Z'], action: 'Annuler' },
   { keys: ['Échap'], action: 'Désélectionner' },
+]
+
+const GESTURES = [
+  { keys: ['1 doigt'], action: 'Tourner autour' },
+  { keys: ['2 doigts'], action: 'Zoomer, déplacer' },
+  { keys: ['Double tap'], action: 'Zoomer sur la pièce' },
+  { keys: ['Plusieurs'], action: 'Sélection multiple' },
 ]
 
 // Native modal dialog: focus trap, Escape and the backdrop come for free.
@@ -114,6 +122,7 @@ export function HelpDialog({ open, onClose }: { open: boolean; onClose: () => vo
 }
 
 function Usage() {
+  const touch = useTouch()
   return (
     <>
       <ol className="steps">
@@ -122,14 +131,14 @@ function Usage() {
             <span className="step-number">{String(i + 1).padStart(2, '0')}</span>
             <div>
               <h3>{step.title}</h3>
-              <p>{step.text}</p>
+              <p>{touch ? step.touch : step.text}</p>
             </div>
           </li>
         ))}
       </ol>
 
       <ul className="shortcuts">
-        {SHORTCUTS.map((s) => (
+        {(touch ? GESTURES : SHORTCUTS).map((s) => (
           <li key={s.action}>
             <span>
               {s.keys.map((k, i) => (

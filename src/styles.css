@@ -98,8 +98,15 @@ a:hover {
 /* ---------- Layout ---------- */
 
 .app {
+  /* Distance to the screen's edges, notches and home bars included. */
+  --pad-t: calc(var(--gap) + env(safe-area-inset-top, 0px));
+  --pad-r: calc(var(--gap) + env(safe-area-inset-right, 0px));
+  --pad-b: calc(var(--gap) + env(safe-area-inset-bottom, 0px));
+  --pad-l: calc(var(--gap) + env(safe-area-inset-left, 0px));
   position: relative;
   height: 100%;
+  /* The visible height, without the mobile browser's bars. */
+  height: 100dvh;
 }
 
 .viewer {
@@ -110,9 +117,9 @@ a:hover {
 
 .toolbar {
   position: absolute;
-  top: var(--gap);
-  left: var(--gap);
-  right: var(--gap);
+  top: var(--pad-t);
+  left: var(--pad-l);
+  right: var(--pad-r);
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -168,10 +175,16 @@ a:hover {
   border-radius: var(--radius-sm);
   box-shadow: 0 8px 24px rgba(38, 33, 27, 0.12);
   animation: fade-in 0.12s ease-out;
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  z-index: 20;
 }
 .menu-item {
   display: flex;
   align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
   padding: 9px 10px;
   border: none;
   border-radius: 4px;
@@ -180,12 +193,23 @@ a:hover {
   text-align: left;
   cursor: pointer;
 }
-.menu-item:hover {
+.menu-item:hover:not(:disabled) {
   background: var(--paper-2);
 }
-.menu-item[aria-current='true'] {
+.menu-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.menu-item[aria-current='true'],
+.menu-item[aria-pressed='true'] {
   color: var(--accent);
   font-weight: 600;
+}
+.menu-sep {
+  flex-shrink: 0;
+  margin: 4px 6px;
+  border: none;
+  border-top: 1px dashed var(--line);
 }
 
 /* What the hovered icon button does, next to the buttons. */
@@ -243,7 +267,7 @@ a:hover {
   pointer-events: auto;
 }
 .sidebar.left {
-  left: var(--gap);
+  left: var(--pad-l);
   width: 264px;
   display: none;
 }
@@ -251,7 +275,7 @@ a:hover {
   display: flex;
 }
 .sidebar.right {
-  right: var(--gap);
+  right: var(--pad-r);
   width: 300px;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -261,8 +285,8 @@ a:hover {
 
 .tree-toggle {
   position: absolute;
-  left: var(--gap);
-  bottom: var(--gap);
+  left: var(--pad-l);
+  bottom: var(--pad-b);
   z-index: 6;
 }
 
@@ -485,6 +509,14 @@ a:hover {
   border: 1px solid var(--edge);
   border-radius: var(--radius-sm);
 }
+.icon-btn.floating.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--paper);
+}
+.icon-btn.floating.primary:hover {
+  background: var(--accent-hover);
+}
 
 .text-btn {
   display: inline-flex;
@@ -532,6 +564,11 @@ a:hover {
 .chip:hover {
   background: rgba(244, 239, 228, 0.1);
   border-color: rgba(244, 239, 228, 0.5);
+}
+.chip[aria-pressed='true'] {
+  background: var(--paper);
+  border-color: var(--paper);
+  color: var(--accent);
 }
 
 /* ---------- Scene tree ---------- */
@@ -912,7 +949,7 @@ input[type='color']:disabled {
 
 .hints {
   position: absolute;
-  bottom: var(--gap);
+  bottom: var(--pad-b);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -1112,6 +1149,7 @@ kbd {
 .help {
   width: min(520px, calc(100% - 32px));
   max-height: min(86vh, 640px);
+  max-height: min(86dvh, 640px);
   padding: 0;
   border: none;
   border-radius: var(--radius);
@@ -1169,6 +1207,7 @@ kbd {
 .help-body {
   /* Both tabs the same height, so the dialog doesn't jump between them. */
   min-height: 236px;
+  flex: 1 1 auto;
   overflow-y: auto;
   gap: 22px;
   padding: 20px 22px 24px;
@@ -1283,10 +1322,11 @@ kbd {
 
 /* ---------- Responsive ---------- */
 
-@media (min-width: 861px) {
-  .tree-toggle {
-    display: none;
-  }
+/* The layouts are set on .app by useLayout (src/lib/layout.ts). */
+
+.app[data-layout='desktop'] .sheet,
+.app[data-layout='desktop'] .history {
+  display: none;
 }
 
 /* Not enough room between the side panels. */
@@ -1296,46 +1336,290 @@ kbd {
   }
 }
 
-@media (max-width: 860px) {
-  :root {
-    --gap: 10px;
+/* Stacked and split: one compact toolbar row, the panels in a tabbed sheet. */
+.app:not([data-layout='desktop']) {
+  --gap: 10px;
+}
+.app:not([data-layout='desktop']) .toolbar {
+  align-items: center;
+  gap: 8px;
+}
+.app:not([data-layout='desktop']) .toolbar-actions {
+  margin-left: auto;
+  gap: 6px;
+}
+.app:not([data-layout='desktop']) .name-card {
+  min-width: 0;
+  height: 42px;
+  padding: 0 12px;
+}
+.app:not([data-layout='desktop']) .name-card > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app:not([data-layout='desktop']) .toast {
+  top: calc(var(--pad-t) + 54px);
+  bottom: auto;
+}
+
+.history {
+  position: absolute;
+  z-index: 6;
+}
+
+.sheet {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+.sheet-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  background: var(--paper);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+}
+.sheet-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sheet-tabs button:hover {
+  color: var(--ink);
+}
+.sheet-tabs button.active {
+  background: var(--accent);
+  color: var(--paper);
+}
+.tab-count {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.sheet-tabs button.active .tab-count {
+  background: var(--paper);
+  color: var(--accent);
+}
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(38, 33, 27, 0.3) transparent;
+}
+
+/* Stacked: the 3D view on top, the sheet below. Sized from the start, as the
+   framing depends on the view's proportions. */
+.app[data-layout='stacked'] .viewer {
+  height: 55% !important;
+}
+.app[data-layout='stacked'] .sheet {
+  top: 55%;
+  left: var(--pad-l);
+  right: var(--pad-r);
+  bottom: var(--pad-b);
+}
+.app[data-layout='stacked'] .history {
+  right: var(--pad-r);
+  bottom: calc(45% + var(--gap));
+}
+.app[data-layout='stacked'] .loading {
+  top: 27.5%;
+}
+
+/* Split: the 3D view on the left, the sheet in a column on the right. */
+.app[data-layout='split'] {
+  --sheet-w: min(340px, 45vw);
+  --beside-sheet: calc(var(--sheet-w) + var(--pad-r));
+}
+.app[data-layout='split'] .viewer {
+  right: var(--beside-sheet) !important;
+  width: auto !important;
+}
+.app[data-layout='split'] .toolbar {
+  right: calc(var(--beside-sheet) + var(--gap));
+}
+.app[data-layout='split'] .sheet {
+  top: var(--pad-t);
+  right: var(--pad-r);
+  bottom: var(--pad-b);
+  width: var(--sheet-w);
+}
+.app[data-layout='split'] .history {
+  right: calc(var(--beside-sheet) + var(--gap));
+  bottom: var(--pad-b);
+}
+.app[data-layout='split'] .loading,
+.app[data-layout='split'] .welcome,
+.app[data-layout='split'] .toast {
+  left: calc(50% - var(--beside-sheet) / 2);
+  max-width: calc(100% - var(--beside-sheet) - 32px);
+}
+
+/* Narrow screens: the help in one column. */
+@media (max-width: 560px) {
+  .help {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - 20px);
   }
-  .hide-sm,
-  .toolbar-hint {
-    display: none;
+  .help .card-head h2 {
+    font-size: 20px;
   }
-  .toolbar {
-    flex-wrap: wrap;
+  .help-body {
+    padding: 18px 18px 22px;
   }
-  .name-card {
-    height: 42px;
-    padding: 0 12px;
-  }
-  /* The 3D view takes the top of the screen, the panels scroll below. */
-  .viewer {
-    height: 56vh !important;
-  }
-  .sidebar.right {
-    top: auto;
-    left: var(--gap);
-    right: var(--gap);
-    width: auto;
-    height: calc(44vh - 2 * var(--gap));
-    bottom: var(--gap);
-  }
-  .sidebar.left {
-    top: 112px;
-    bottom: calc(44vh + var(--gap));
-    z-index: 7;
-  }
-  .tree-toggle {
-    bottom: calc(44vh + var(--gap));
-  }
+  .steps,
   .shortcuts {
     grid-template-columns: 1fr;
+  }
+  .steps {
+    gap: 14px;
   }
   .help-foot {
     flex-wrap: wrap;
     gap: 12px;
+    padding: 14px 18px;
+  }
+}
+
+/* Short screens (landscape phones): the help keeps its footer in view. */
+@media (max-height: 500px) {
+  .help {
+    max-height: calc(100dvh - 20px);
+  }
+  .help .card-head {
+    gap: 8px;
+    padding: 10px 16px;
+  }
+  .help .card-head .kicker {
+    display: none;
+  }
+  .help-body {
+    min-height: 0;
+    padding: 14px 22px;
+  }
+  .help-foot {
+    padding: 10px 22px;
+  }
+}
+
+/* Fingers: no hover, and targets of about 44px. */
+@media (pointer: coarse) {
+  .hover-label,
+  .toolbar-hint {
+    display: none;
+  }
+  /* In place of the hidden hint. */
+  .toolbar-actions {
+    margin-left: auto;
+  }
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .icon-btn.floating {
+    width: 44px;
+    height: 44px;
+  }
+  .name-card {
+    height: 48px;
+  }
+  .app:not([data-layout='desktop']) .name-card {
+    height: 44px;
+  }
+  .icon-btn.small,
+  .icon-btn.ghost,
+  .icon-btn.on-ink {
+    width: 36px;
+    height: 36px;
+  }
+  .btn {
+    height: 44px;
+  }
+  .btn.ghost {
+    height: 40px;
+  }
+  .menu-item {
+    min-height: 44px;
+  }
+  .sheet-tabs button,
+  .tabs button {
+    height: 40px;
+  }
+  .search,
+  .hex-input,
+  select {
+    height: 40px;
+  }
+  .tree-row {
+    height: 40px;
+  }
+  .tree-row .eye {
+    opacity: 0.8;
+  }
+  .caret {
+    width: 28px;
+    height: 28px;
+  }
+  .chip {
+    padding: 8px 12px;
+  }
+  .chip-color {
+    height: 40px;
+  }
+  .segmented button {
+    height: 38px;
+  }
+  .text-btn,
+  .section-toggle {
+    padding: 8px;
+  }
+  .variant-apply {
+    padding: 10px 8px;
+  }
+  .toggle {
+    min-height: 36px;
+  }
+  .toggle input {
+    width: 20px;
+    height: 20px;
+  }
+  input[type='range'] {
+    margin: 10px 0;
+  }
+  input[type='range']::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
   }
 }

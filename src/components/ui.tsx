@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Icon } from './Icons'
 
 interface SectionProps {
@@ -69,5 +69,53 @@ export function Slider({ label, value, min = 0, max = 1, step = 0.01, onBegin, o
         style={{ '--progress': `${((value - min) / (max - min)) * 100}%` } as CSSProperties}
       />
     </label>
+  )
+}
+
+interface MenuProps {
+  label: string
+  /** The button's content. */
+  button: ReactNode
+  className?: string
+  /** Receives a function that closes the list. */
+  children: (close: () => void) => ReactNode
+}
+
+// A list that drops down under a button, closed by a click elsewhere or Escape.
+export function Menu({ label, button, className = 'btn', children }: MenuProps) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e: PointerEvent) => !root.current?.contains(e.target as Node) && setOpen(false)
+    window.addEventListener('pointerdown', close)
+    return () => window.removeEventListener('pointerdown', close)
+  }, [open])
+
+  return (
+    <div
+      ref={root}
+      className="menu"
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape' || !open) return
+        // Keeps the global shortcut (clear the selection) out of it.
+        e.stopPropagation()
+        setOpen(false)
+        buttonRef.current?.focus()
+      }}
+    >
+      <button
+        ref={buttonRef}
+        className={className}
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {button}
+      </button>
+      {open && <div className="menu-list">{children(() => setOpen(false))}</div>}
+    </div>
   )
 }

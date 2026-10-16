@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { site } from '../site'
 import { ACCEPTED_EXTENSIONS } from '../lib/loadModel'
@@ -6,6 +6,7 @@ import { exportGLB, takeScreenshot } from '../lib/exporters'
 import { rendererRef } from './Viewer'
 import { Icon, type IconName } from './Icons'
 import { SampleMenu } from './SampleMenu'
+import { Menu } from './ui'
 
 interface IconAction {
   id: string
@@ -23,12 +24,60 @@ interface IconAction {
 const hintIdOf = (target: EventTarget) =>
   (target instanceof Element && target.closest<HTMLElement>('[data-hint]')?.dataset.hint) || null
 
-export function Toolbar({ onHelp }: { onHelp: () => void }) {
-  const model = useStore((s) => s.model)
+function useHistoryActions(): IconAction[] {
   const canUndo = useStore((s) => s.undoStack.length > 0)
   const canRedo = useStore((s) => s.redoStack.length > 0)
+  const { undo, redo } = useStore.getState()
+  return [
+    {
+      id: 'undo',
+      icon: 'undo',
+      label: 'Annuler',
+      hint: 'Revient sur la dernière modification de couleur ou de finition.',
+      keys: 'Ctrl+Z',
+      onClick: undo,
+      disabled: !canUndo,
+    },
+    { id: 'redo', icon: 'redo', label: 'Rétablir', hint: "Refait ce qui vient d'être annulé.", keys: 'Ctrl+Y', onClick: redo, disabled: !canRedo },
+  ]
+}
+
+function IconButtons({ actions }: { actions: IconAction[] }) {
+  return (
+    <div className="btn-group">
+      {actions.map((action) => (
+        <button
+          key={action.id}
+          data-hint={action.id}
+          className={`icon-btn${action.active ? ' active' : ''}`}
+          onClick={action.onClick}
+          disabled={action.disabled}
+          aria-label={action.label}
+          aria-pressed={action.active}
+        >
+          <Icon name={action.icon} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Undo and redo, floating over the view when the toolbar is compact.
+export function HistoryButtons() {
+  return (
+    <div className="history">
+      <IconButtons actions={useHistoryActions()} />
+    </div>
+  )
+}
+
+/** `compact`: the name, the examples, the other actions in a menu and the import, in one row. */
+export function Toolbar({ onHelp, compact }: { onHelp: () => void; compact: boolean }) {
+  const model = useStore((s) => s.model)
   const autoRotate = useStore((s) => s.autoRotate)
-  const { loadFiles, undo, redo, resetCamera, resetMaterials, resetAll, set } = useStore.getState()
+  const viewInsets = useStore((s) => s.viewInsets)
+  const { loadFiles, resetCamera, resetMaterials, resetAll, set } = useStore.getState()
+  const history = useHistoryActions()
   const input = useRef<HTMLInputElement>(null)
   const [exporting, setExporting] = useState(false)
   const [hintId, setHintId] = useState<string | null>(null)
@@ -48,18 +97,7 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
   }
 
   const groups: IconAction[][] = [
-    [
-      {
-        id: 'undo',
-        icon: 'undo',
-        label: 'Annuler',
-        hint: 'Revient sur la dernière modification de couleur ou de finition.',
-        keys: 'Ctrl+Z',
-        onClick: undo,
-        disabled: !canUndo,
-      },
-      { id: 'redo', icon: 'redo', label: 'Rétablir', hint: "Refait ce qui vient d'être annulé.", keys: 'Ctrl+Y', onClick: redo, disabled: !canRedo },
-    ],
+    history,
     [
       {
         id: 'rotate',
@@ -74,7 +112,7 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
         icon: 'camera',
         label: 'Capture PNG',
         hint: 'Enregistre la vue actuelle en image.',
-        onClick: () => rendererRef.current && takeScreenshot(rendererRef.current, baseName),
+        onClick: () => rendererRef.current && takeScreenshot(rendererRef.current, baseName, viewInsets),
         disabled: !model,
       },
       {
@@ -116,14 +154,79 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
   ]
   const hint = groups.flat().find((a) => a.id === hintId)
 
+  const nameCard = (
+    <div className="name-card">
+      <h1>Configurateur 3D</h1>
+      <a href={site.links.portfolio} target="_blank" rel="noreferrer">
+        par {site.author}
+      </a>
+    </div>
+  )
+
+  const importButton = (
+    <>
+      <button
+        className={compact ? 'icon-btn floating primary' : 'btn primary'}
+        onClick={() => input.current?.click()}
+        aria-label={compact ? 'Importer' : undefined}
+      >
+        <Icon name="upload" size={compact ? 16 : 15} /> {!compact && 'Importer'}
+      </button>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        hidden
+        accept={ACCEPTED_EXTENSIONS.map((e) => '.' + e).join(',')}
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? [])
+          e.target.value = ''
+          if (files.length) loadFiles(files)
+        }}
+      />
+    </>
+  )
+
+  if (compact) {
+    return (
+      <header className="toolbar">
+        {nameCard}
+        <div className="toolbar-actions">
+          <SampleMenu compact />
+          <Menu label="Plus d'actions" className="icon-btn floating" button={<Icon name="more" />}>
+            {(close) =>
+              // Undo and redo float over the view instead.
+              groups.slice(1).map((group, i) => (
+                <Fragment key={i}>
+                  {i > 0 && <hr className="menu-sep" />}
+                  {group.map((action) => (
+                    <button
+                      key={action.id}
+                      className="menu-item"
+                      disabled={action.disabled}
+                      aria-pressed={action.active}
+                      onClick={() => {
+                        close()
+                        action.onClick()
+                      }}
+                    >
+                      <Icon name={action.icon} size={15} />
+                      {action.label}
+                    </button>
+                  ))}
+                </Fragment>
+              ))
+            }
+          </Menu>
+          {importButton}
+        </div>
+      </header>
+    )
+  }
+
   return (
     <header className="toolbar">
-      <div className="name-card">
-        <h1>Configurateur 3D</h1>
-        <a href={site.links.portfolio} target="_blank" rel="noreferrer">
-          par {site.author}
-        </a>
-      </div>
+      {nameCard}
 
       <p className={`toolbar-hint${hint ? ' visible' : ''}`} aria-live="polite">
         {hint && (
@@ -145,38 +248,10 @@ export function Toolbar({ onHelp }: { onHelp: () => void }) {
         onBlur={() => setHintId(null)}
       >
         {groups.map((group, i) => (
-          <div key={i} className="btn-group">
-            {group.map((action) => (
-              <button
-                key={action.id}
-                data-hint={action.id}
-                className={`icon-btn${action.active ? ' active' : ''}`}
-                onClick={action.onClick}
-                disabled={action.disabled}
-                aria-label={action.label}
-                aria-pressed={action.active}
-              >
-                <Icon name={action.icon} />
-              </button>
-            ))}
-          </div>
+          <IconButtons key={i} actions={group} />
         ))}
         <SampleMenu />
-        <button className="btn primary" onClick={() => input.current?.click()}>
-          <Icon name="upload" size={15} /> <span className="hide-sm">Importer</span>
-        </button>
-        <input
-          ref={input}
-          type="file"
-          multiple
-          hidden
-          accept={ACCEPTED_EXTENSIONS.map((e) => '.' + e).join(',')}
-          onChange={(e) => {
-            const files = Array.from(e.target.files ?? [])
-            e.target.value = ''
-            if (files.length) loadFiles(files)
-          }}
-        />
+        {importButton}
       </div>
     </header>
   )

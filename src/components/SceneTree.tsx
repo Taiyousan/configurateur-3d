@@ -154,7 +154,7 @@ function TreeRow({ object, depth, expandable, expanded, selected, onToggle }: Ro
       aria-expanded={expandable ? expanded : undefined}
       onClick={onClick}
       onDoubleClick={() => focusOn(object)}
-      onPointerEnter={() => setHovered(object)}
+      onPointerEnter={(e) => e.pointerType !== 'touch' && setHovered(object)}
       onPointerLeave={() => setHovered(null)}
     >
       <button

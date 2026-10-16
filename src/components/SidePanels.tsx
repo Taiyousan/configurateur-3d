@@ -57,7 +57,7 @@ const ENV_PRESETS: { value: EnvPreset; label: string }[] = [
   { value: 'night', label: 'Nuit' },
 ]
 
-export function ScenePanel() {
+export function ScenePanel({ collapsible = true }: { collapsible?: boolean }) {
   // Only the settings: the whole store would re-render the panel on every hover.
   const s = useStore(
     useShallow(({ envPreset, envIntensity, background, showEnvBackground, shadows, set }) => ({
@@ -72,7 +72,7 @@ export function ScenePanel() {
 
   return (
     <section className="panel card-body">
-      <Section title="Scène" collapsible>
+      <Section title="Scène" collapsible={collapsible}>
         <label className="field-row">
           <span>Éclairage</span>
           <select value={s.envPreset} onChange={(e) => s.set({ envPreset: e.target.value as EnvPreset })}>

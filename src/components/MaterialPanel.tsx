@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
 import { useStore } from '../store'
+import { useTouch } from '../lib/layout'
 import {
   collectMaterials,
   collectMeshes,
@@ -30,10 +31,12 @@ export function MaterialPanel() {
   const model = useStore((s) => s.model)
   const selection = useStore((s) => s.selection)
   const showDetails = useStore((s) => s.showDetails)
+  const multiSelect = useStore((s) => s.multiSelect)
   useStore((s) => s.revision)
+  const touch = useTouch()
   const [customColor, setCustomColor] = useState(true)
   const [fineTuning, setFineTuning] = useState(true)
-  const { beginEdit, touch, setSelection, select, focusOn } = useStore.getState()
+  const { beginEdit, touch: refresh, setSelection, select, focusOn, set } = useStore.getState()
 
   const materials = useMemo(() => collectMaterials(selection), [selection])
   const meshes = useMemo(() => collectMeshes(selection), [selection])
@@ -56,8 +59,17 @@ export function MaterialPanel() {
         </header>
         <div className="card-body empty-state">
           <Icon name="pointer" size={20} />
-          <p>Cliquez sur une pièce du modèle, ou dans la structure, pour changer sa couleur et sa finition.</p>
-          <p className="muted small">Maj + clic pour en sélectionner plusieurs, double-clic pour zoomer.</p>
+          {touch ? (
+            <>
+              <p>Touchez une pièce du modèle, ou dans la structure, pour changer sa couleur et sa finition.</p>
+              <p className="muted small">« Plusieurs » pour en ajouter d'autres, double tap pour zoomer.</p>
+            </>
+          ) : (
+            <>
+              <p>Cliquez sur une pièce du modèle, ou dans la structure, pour changer sa couleur et sa finition.</p>
+              <p className="muted small">Maj + clic pour en sélectionner plusieurs, double-clic pour zoomer.</p>
+            </>
+          )}
         </div>
       </section>
     )
@@ -71,12 +83,12 @@ export function MaterialPanel() {
   const apply = (partial: Partial<MaterialState>, record = true) => {
     if (record) beginEdit(materials)
     materials.forEach((m) => writeState(m, partial))
-    touch()
+    refresh()
   }
   const reset = () => {
     beginEdit(materials)
     materials.forEach((m) => writeState(m, originalState(m)))
-    touch()
+    refresh()
   }
 
   const single = selection.length === 1 ? selection[0] : null
@@ -113,6 +125,12 @@ export function MaterialPanel() {
           <button className="chip" onClick={() => focusOn(selection)} title="Cadrer la sélection (F)">
             <Icon name="focus" size={12} /> Cadrer
           </button>
+          {/* Shift + click, for fingers: the next taps add to the selection. */}
+          {touch && (
+            <button className="chip" aria-pressed={multiSelect} onClick={() => set({ multiSelect: !multiSelect })}>
+              <Icon name="plus" size={12} /> Plusieurs
+            </button>
+          )}
         </div>
       </header>
 

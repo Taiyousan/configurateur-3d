@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import { filesFromDataTransfer, MODEL_EXTENSIONS } from '../lib/loadModel'
 import { labelOf } from '../lib/materials'
 import { SAMPLES } from '../lib/samples'
+import { useTouch } from '../lib/layout'
 import { Icon } from './Icons'
 
 // Full-screen drop target, shown as soon as files are dragged over the page.
@@ -108,6 +109,7 @@ export function StatusOverlay() {
   const error = useStore((s) => s.error)
   const hasModel = useStore((s) => !!s.model)
   const set = useStore((s) => s.set)
+  const touch = useTouch()
 
   useEffect(() => {
     if (!error) return
@@ -126,8 +128,8 @@ export function StatusOverlay() {
       {!hasModel && status !== 'loading' && (
         <div className="welcome">
           <p className="kicker">Aucun modèle</p>
-          <h2>Déposez un fichier 3D ici</h2>
-          <p className="muted">GLB, glTF, FBX, OBJ ou STL</p>
+          <h2>{touch ? 'Importez un fichier 3D' : 'Déposez un fichier 3D ici'}</h2>
+          <p className="muted">GLB, glTF, FBX, OBJ ou STL{touch && ', avec le bouton en haut'}</p>
           <p className="kicker welcome-or">Ou partez d'un exemple</p>
           <div className="welcome-samples">
             {SAMPLES.map((s) => (

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useStore } from './store'
 import { Viewer } from './components/Viewer'
-import { Toolbar } from './components/Toolbar'
+import { HistoryButtons, Toolbar } from './components/Toolbar'
 import { SceneTree } from './components/SceneTree'
 import { MaterialPanel } from './components/MaterialPanel'
 import { ScenePanel, VariantsPanel } from './components/SidePanels'
 import { ControlsPanel, DropZone, HoverLabel, StatusOverlay } from './components/Overlays'
 import { HelpDialog } from './components/HelpDialog'
+import { PanelSheet } from './components/PanelSheet'
 import { Icon } from './components/Icons'
+import { useLayout, useTouch, viewInsets } from './lib/layout'
 
 const HELP_SEEN_KEY = 'configurateur-3d:help-seen'
 
@@ -50,8 +52,12 @@ function useShortcuts(openHelp: () => void) {
 
 export default function App() {
   const hasModel = useStore((s) => !!s.model)
-  const [treeOpen, setTreeOpen] = useState(() => window.innerWidth > 860)
+  const layout = useLayout()
+  const touch = useTouch()
+  // Below this width, the structure would leave little room for the model.
+  const [treeOpen, setTreeOpen] = useState(() => window.innerWidth >= 1200)
   const [helpOpen, setHelpOpen] = useState(() => !helpSeen())
+  const desktop = layout === 'desktop'
 
   const closeHelp = () => {
     setHelpOpen(false)
@@ -61,16 +67,25 @@ export default function App() {
   const openHelp = useCallback(() => setHelpOpen(true), [])
   useShortcuts(openHelp)
   useEffect(() => {
+    useStore.getState().set({ viewInsets: viewInsets(layout, hasModel && treeOpen, touch) })
+  }, [layout, hasModel, treeOpen, touch])
+  useEffect(() => {
     // Guard against StrictMode's double mount in dev.
     if (useStore.getState().status === 'idle') useStore.getState().loadSample()
   }, [])
 
   return (
-    <div className="app">
+    <div className="app" data-layout={layout}>
       <Viewer />
-      <Toolbar onHelp={openHelp} />
+      <Toolbar onHelp={openHelp} compact={!desktop} />
 
-      {hasModel && (
+      {hasModel && !desktop && (
+        <>
+          <HistoryButtons />
+          <PanelSheet />
+        </>
+      )}
+      {hasModel && desktop && (
         <>
           <aside className={`sidebar left${treeOpen ? ' open' : ''}`}>
             <SceneTree />
